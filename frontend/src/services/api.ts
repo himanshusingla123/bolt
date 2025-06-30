@@ -84,6 +84,24 @@ class ApiService {
     return response;
   }
 
+  // Token validation method
+  async validateToken(): Promise<boolean> {
+    const token = this.getToken();
+    if (!token) {
+      return false;
+    }
+
+    try {
+      // Make a simple authenticated request to validate the token
+      await this.getVoices();
+      return true;
+    } catch (error) {
+      // If the request fails, the token is invalid
+      this.clearToken();
+      return false;
+    }
+  }
+
   // Auth endpoints
   async register(email: string, password: string): Promise<AuthResponse> {
     const response = await this.request('/auth/register', {
