@@ -1,14 +1,18 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const { elevenlabs } = require('../config/elevenlabs');
 const { verifyToken } = require('../middleware/auth');
 const { supabase } = require('../config/supabase');
 
-// Speech-to-text endpoint
-router.post('/transcribe', verifyToken, async (req, res) => {
-  const { model_id = 'scribe_v1', language_code, file } = req.body;
+// Configure multer for memory storage
+const upload = multer({ storage: multer.memoryStorage() });
 
-  if (!file?.buffer) {
+// Speech-to-text endpoint
+router.post('/transcribe', verifyToken, upload.single('file'), async (req, res) => {
+  const { model_id = 'scribe_v1', language_code } = req.body;
+
+  if (!req.file?.buffer) {
     return res.status(400).json({ error: 'Audio file is required' });
   }
 
@@ -16,8 +20,8 @@ router.post('/transcribe', verifyToken, async (req, res) => {
     // Upload to Supabase first
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('audio-uploads')
-      .upload(`${Date.now()}-audio`, file.buffer, {
-        contentType: file.mimetype
+      .upload(`${Date.now()}-audio`, req.file.buffer, {
+        contentType: req.file.mimetype
       });
     if (uploadError) throw uploadError;
 
