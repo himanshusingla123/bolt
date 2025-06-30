@@ -11,9 +11,5 @@ services:
         value: 3000
       - key: NODE_ENV
         value: production
-      - key: SUPABASE_URL
-        value: https://pfnqpxkrrqsrtybiksee.supabase.co
-      - key: SUPABASE_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmbnFweGtycnFzcnR5Ymlrc2VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjQxMTksImV4cCI6MjA2NjYwMDExOX0.5oDw-QWql9s8OJIvxEDG12vutETt8xNjJEnpbWjaPAY
     autoDeploy: true
     plan: starter
