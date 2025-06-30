@@ -98,6 +98,11 @@ class ApiService {
     return data;
   }
 
+  async getCurrentUser(): Promise<{ user: { id: string; email: string } }> {
+    const response = await this.request('/auth/me');
+    return response.json();
+  }
+
   // TTS endpoints
   async getVoices(): Promise<Voice[]> {
     const response = await this.request('/tts/voices');

@@ -330,14 +330,25 @@ const AuthForm = ({ onLogin }: { onLogin: (user: any) => void }) => {
 
 function App() {
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = apiService.getToken();
-    if (token) {
-      // In a real app, you'd validate the token with the backend
-      setUser({ email: 'user@example.com', id: '1' });
-    }
+    const validateToken = async () => {
+      const token = apiService.getToken();
+      if (token) {
+        try {
+          const response = await apiService.getCurrentUser();
+          setUser(response.user);
+        } catch (error) {
+          // Token is invalid, clear it
+          apiService.clearToken();
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+
+    validateToken();
   }, []);
 
   const handleLogin = (userData: any) => {
@@ -349,6 +360,14 @@ function App() {
     setUser(null);
     toast.success('Logged out successfully');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <Router>
