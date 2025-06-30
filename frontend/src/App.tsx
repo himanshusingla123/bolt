@@ -339,10 +339,14 @@ function App() {
         try {
           const response = await apiService.getCurrentUser();
           setUser(response.user);
-        } catch (error) {
-          // Token is invalid, clear it
-          apiService.clearToken();
-          setUser(null);
+        } catch (error: any) {
+          // Only clear token for authentication errors (401), not for other errors like 404
+          if (error.status === 401) {
+            apiService.clearToken();
+            setUser(null);
+          }
+          // For other errors (like 404), keep the token and set user to null
+          // This allows other authenticated requests to still work
         }
       }
       setLoading(false);

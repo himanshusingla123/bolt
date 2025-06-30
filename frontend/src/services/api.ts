@@ -29,6 +29,10 @@ interface TranscriptionResponse {
   duration: number;
 }
 
+interface ApiError extends Error {
+  status?: number;
+}
+
 class ApiService {
   private token: string | null = null;
 
@@ -73,7 +77,9 @@ class ApiService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Network error' }));
-      throw new Error(error.error || 'Request failed');
+      const apiError = new Error(error.error || 'Request failed') as ApiError;
+      apiError.status = response.status;
+      throw apiError;
     }
 
     return response;
