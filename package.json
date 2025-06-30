@@ -11,6 +11,7 @@
     "lint": "cd backend && npm run lint"
   },
   "workspaces": [
-    "backend"
+    "backend",
+    "frontend"
   ]
 }
