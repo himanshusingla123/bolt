@@ -9,7 +9,13 @@ router.post('/register', async (req, res) => {
   try {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
-    res.status(201).json(data);
+    
+    // Return the response in the format expected by frontend
+    res.status(201).json({
+      id: data.user?.id,
+      email: data.user?.email,
+      created_at: data.user?.created_at
+    });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
