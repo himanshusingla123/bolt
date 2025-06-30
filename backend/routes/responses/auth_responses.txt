@@ -1,0 +1,259 @@
+{
+  "register": {
+    "success": {
+      "id": "user-id-123",
+      "email": "user@example.com",
+      "created_at": "2025-06-30T14:52:00Z"
+    },
+    "error": {
+      "error": "Email already in use"
+    }
+  },
+  "login": {
+    "success": {
+      "access_token": "supabase-access-token",
+      "refresh_token": "supabase-refresh-token",
+      "user": {
+        "id": "user-id-123",
+        "email": "user@example.com"
+      }
+    },
+    "error": {
+      "error": "Invalid login credentials"
+    }
+  }
+}
+
+
+---------------
+dubbing_responses.json
+{
+  "create": {
+    "success": {
+      "dubbing_id": "dub-12345",
+      "status": "processing",
+      "estimated_time_remaining": 120
+    },
+    "error": {
+      "error": "Invalid file format"
+    }
+  },
+  "get": {
+    "success": {
+      "dubbing_id": "dub-12345",
+      "status": "completed",
+      "audio_url": "https://example.com/dubbed-audio.mp3"
+    },
+    "error": {
+      "error": "Dubbing project not found"
+    }
+  },
+  "status": {
+    "success": {
+      "status": "processing",
+      "progress": 65
+    },
+    "error": {
+      "error": "Invalid dubbing ID"
+    }
+  },
+  "delete": {
+    "success": {
+      "message": "Dubbing project deleted"
+    },
+    "error": {
+      "error": "Failed to delete dubbing project"
+    }
+  }
+}
+
+
+Core Conversation Endpoints
+
+2. WebSocket Connection (Main Conversation Endpoint)
+Endpoint: wss://api.elevenlabs.io/v1/convai/conversation
+
+Purpose: Establish a WebSocket connection for real-time conversations with an AI agent
+
+Usage: This is the primary endpoint where the actual conversation happens. You connect to this WebSocket endpoint to send messages and receive responses.
+
+Complete Conversation Flow
+Step 1: Create Signed URL (Server-side)
+For authenticated agents, create an API route to generate signed URLs:
+
+// /app/api/signed-url/route.ts
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
+import { NextResponse } from 'next/server';
+export async function GET() {
+  const agentId = process.env.ELEVENLABS_AGENT_ID;
+  if (!agentId) {
+    throw Error('ELEVENLABS_AGENT_ID is not set');
+  }
+  try {
+    const elevenlabs = new ElevenLabsClient();
+    const response = await elevenlabs.conversationalAi.conversations.getSignedUrl({
+      agentId,
+    });
+    return NextResponse.json({ signedUrl: response.signedUrl });
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json({ error: 'Failed to get signed URL' }, { status: 500 });
+  }
+}
+
+Step 2: Start Conversation Session (Client-side)
+Use the signed URL to start a conversation session:
+
+const conversation = useConversation({
+  onConnect: () => console.log('Connected'),
+  onDisconnect: () => console.log('Disconnected'),
+  onMessage: (message: string) => console.log('Message:', message),
+  onError: (error: Error) => console.error('Error:', error),
+});
+const startConversation = useCallback(async () => {
+  try {
+    // Request microphone permission
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    // Start the conversation with your agent
+    const signedUrl = await getSignedUrl();
+    const convId = await conversation.startSession({
+      signedUrl,
+      dynamicVariables: {
+        user_name: userName,
+      },
+      clientTools: {
+        set_ui_state: ({ step }: { step: string }): string => {
+          setCurrentStep(step as 'initial' | 'training' | 'voice' | 'email' | 'ready');
+          return `Navigated to ${step}`;
+        },
+      },
+    });
+    setConversationId(convId);
+    console.log('Conversation ID:', convId);
+  } catch (error) {
+    console.error('Failed to start conversation:', error);
+  }
+}, [conversation, userName]);
+
+Step 3: End Conversation Session
+const stopConversation = useCallback(async () => {
+  await conversation.endSession();
+}, [conversation]);
+
+Additional Conversation Management Endpoints
+Send Conversation Feedback
+Endpoint: POST /v1/convai/conversations/:conversation_id/feedback
+
+Purpose: Send feedback for a given conversation
+
+Usage: Used to provide feedback about the conversation quality after it ends.
+
+Key Features Available During Conversations
+Dynamic Variables
+You can pass dynamic variables
+
+Was this response helpful?
+
+
+
+function createConversationSocket(agentId, handlers = {}) {
+  const ws = new WebSocket(`wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentId}`, {
+    headers: {
+      'xi-api-key': process.env.ELEVENLABS_API_KEY
+    }
+  });
+
+  ws.on('open', () => {
+    handlers.onOpen?.();
+  });
+
+  ws.on('message', (data) => {
+    try {
+      const message = JSON.parse(data);
+      switch(message.type) {
+        case 'agent_response':
+          handlers.onAgentResponse?.(message.agent_response_event);
+          break;
+        case 'audio':
+          handlers.onAudio?.(message.audio_event);
+          break;
+        case 'client_tool_call':
+          handlers.onToolCall?.(message.client_tool_call);
+          break;
+        case 'user_transcript':
+          handlers.onUserTranscript?.(message.user_transcription_event);
+          break;
+        case 'interruption':
+          handlers.onInterruption?.(message.interruption_event);
+          break;
+        case 'ping':
+          handlers.onPing?.(message.ping_event);
+          break;
+        default:
+          handlers.onMessage?.(message);
+      }
+    } catch (err) {
+      console.error('Error processing WebSocket message:', err);
+      handlers.onError?.(err);
+    }
+  });
+
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+    handlers.onError?.(error);
+  });
+
+  ws.on('close', () => {
+    handlers.onClose?.();
+  });
+
+  return {
+    send: (message) => ws.send(JSON.stringify(message)),
+    close: () => ws.close()
+  };
+}
+
+
+---------
+{
+  "transcribe": {
+    "success": {
+      "text": "This is the transcribed text from the audio file.",
+      "language": "en",
+      "duration": 4.25
+    },
+    "error": {
+      "error": "Invalid audio format"
+    }
+  }
+}
+
+---------
+{
+  "voices": {
+    "success": [
+      {
+        "voice_id": "21m00Tcm4TlvDq8ikWAM",
+        "name": "Rachel",
+        "gender": "female",
+        "language": "en"
+      },
+      {
+        "voice_id": "29vD33N1CtxCmqQRPOHJ",
+        "name": "Daniel",
+        "gender": "male",
+        "language": "en"
+      }
+    ],
+    "error": {
+      "error": "Failed to fetch voices"
+    }
+  },
+  "text-to-speech": {
+    "success": "audio/mpeg binary data",
+    "error": {
+      "error": "Invalid voice ID"
+    }
+  }
+}

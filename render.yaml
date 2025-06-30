@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: bolt-backend
+    runtime: node
+    region: singapore
+    buildCommand: npm install
+    startCommand: npm run prod
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true
+    plan: starter
