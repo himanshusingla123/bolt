@@ -22,7 +22,13 @@ router.post('/login', async (req, res) => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    res.status(200).json(data);
+    
+    // Return the response in the format expected by frontend
+    res.status(200).json({
+      access_token: data.session?.access_token,
+      refresh_token: data.session?.refresh_token,
+      user: data.user
+    });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
