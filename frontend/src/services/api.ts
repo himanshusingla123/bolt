@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'https://bolt-backend-fl0b.onrender.com';
 
 interface AuthResponse {
   access_token: string;
@@ -54,12 +54,16 @@ class ApiService {
     const token = this.getToken();
     
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
       ...options.headers,
     };
 
     if (token) {
       headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Only add Content-Type for non-FormData requests
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
     }
 
     const response = await fetch(url, {
@@ -115,7 +119,6 @@ class ApiService {
 
     const response = await this.request('/stt/transcribe', {
       method: 'POST',
-      headers: {}, // Remove Content-Type to let browser set it for FormData
       body: formData,
     });
     return response.json();
@@ -133,7 +136,6 @@ class ApiService {
 
     const response = await this.request('/dubbing/create', {
       method: 'POST',
-      headers: {}, // Remove Content-Type to let browser set it for FormData
       body: formData,
     });
     return response.json();
