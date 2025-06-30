@@ -106,6 +106,7 @@ class ApiService {
   // TTS endpoints
   async getVoices(): Promise<Voice[]> {
     const response = await this.request('/tts/voices');
+    console.log("response");
     return response.json();
   }
 
