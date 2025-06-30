@@ -14,9 +14,29 @@ const app = express();
 // Health check endpoint for Render
 app.get('/health', (req, res) => res.sendStatus(200));
 
-// Configure CORS properly
+// Configure CORS to allow WebContainer and local development
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost and WebContainer origins
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'https://localhost:5173',
+      'http://127.0.0.1:5173',
+      'https://127.0.0.1:5173'
+    ];
+    
+    // Allow any WebContainer origin (they have specific patterns)
+    if (origin.includes('.webcontainer-api.io') || 
+        origin.includes('.local-credentialless.webcontainer-api.io') ||
+        allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true
