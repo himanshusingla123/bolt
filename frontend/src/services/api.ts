@@ -72,6 +72,11 @@ class ApiService {
     });
 
     if (!response.ok) {
+      // Check for 401 Unauthorized and clear invalid token
+      if (response.status === 401) {
+        this.clearToken();
+      }
+      
       const error = await response.json().catch(() => ({ error: 'Network error' }));
       throw new Error(error.error || 'Request failed');
     }
