@@ -1,0 +1,16 @@
+{
+  "name": "dubbing-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd backend && npm run dev",
+    "start": "cd backend && npm run start",
+    "build": "cd backend && npm run build",
+    "install:backend": "cd backend && npm install",
+    "test": "cd backend && npm run test",
+    "lint": "cd backend && npm run lint"
+  },
+  "workspaces": [
+    "backend"
+  ]
+}
