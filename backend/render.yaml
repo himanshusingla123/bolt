@@ -11,5 +11,9 @@ services:
         value: 3000
       - key: NODE_ENV
         value: production
+      - key: SUPABASE_URL
+        value: YOUR_SUPABASE_URL
+      - key: SUPABASE_KEY
+        value: YOUR_SUPABASE_KEY
     autoDeploy: true
     plan: starter
