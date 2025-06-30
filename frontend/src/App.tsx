@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Mic, Volume2, FileAudio, Users, Settings, LogOut, Menu, X } from 'lucide-react';
+import { apiService } from './services/api';
+import { TextToSpeech } from './components/TextToSpeech';
+import { SpeechToText } from './components/SpeechToText';
+import { AudioDubbing } from './components/AudioDubbing';
+import { AIConversation } from './components/AIConversation';
+import toast from 'react-hot-toast';
 
 // Components
 const Header = ({ user, onLogout }: { user: any; onLogout: () => void }) => {
@@ -56,20 +62,27 @@ const Header = ({ user, onLogout }: { user: any; onLogout: () => void }) => {
   );
 };
 
-const FeatureCard = ({ icon: Icon, title, description, onClick }: {
+const FeatureCard = ({ icon: Icon, title, description, onClick, isActive }: {
   icon: any;
   title: string;
   description: string;
   onClick: () => void;
+  isActive: boolean;
 }) => (
   <motion.div
     whileHover={{ scale: 1.02 }}
     whileTap={{ scale: 0.98 }}
-    className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 cursor-pointer hover:bg-white/15 transition-all duration-300"
+    className={`rounded-xl p-6 border cursor-pointer transition-all duration-300 ${
+      isActive
+        ? 'bg-purple-500/20 border-purple-400'
+        : 'bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/15'
+    }`}
     onClick={onClick}
   >
     <div className="flex items-center space-x-4 mb-4">
-      <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
+      <div className={`p-3 rounded-lg ${
+        isActive ? 'bg-purple-500' : 'bg-gradient-to-r from-purple-500 to-pink-500'
+      }`}>
         <Icon className="text-white" size={24} />
       </div>
       <h3 className="text-xl font-semibold text-white">{title}</h3>
@@ -108,6 +121,21 @@ const Dashboard = ({ user, onLogout }: { user: any; onLogout: () => void }) => {
     }
   ];
 
+  const renderActiveFeature = () => {
+    switch (activeFeature) {
+      case 'stt':
+        return <SpeechToText />;
+      case 'tts':
+        return <TextToSpeech />;
+      case 'dubbing':
+        return <AudioDubbing />;
+      case 'conversation':
+        return <AIConversation />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       <Header user={user} onLogout={onLogout} />
@@ -143,7 +171,8 @@ const Dashboard = ({ user, onLogout }: { user: any; onLogout: () => void }) => {
                 icon={feature.icon}
                 title={feature.title}
                 description={feature.description}
-                onClick={() => setActiveFeature(feature.id)}
+                onClick={() => setActiveFeature(activeFeature === feature.id ? null : feature.id)}
+                isActive={activeFeature === feature.id}
               />
             </motion.div>
           ))}
@@ -167,14 +196,7 @@ const Dashboard = ({ user, onLogout }: { user: any; onLogout: () => void }) => {
               </button>
             </div>
             
-            <div className="text-center py-12">
-              <p className="text-white/70 text-lg">
-                Feature implementation coming soon...
-              </p>
-              <p className="text-white/50 mt-2">
-                This will integrate with the ElevenLabs API for {activeFeature} functionality
-              </p>
-            </div>
+            {renderActiveFeature()}
           </motion.div>
         )}
       </main>
@@ -208,11 +230,21 @@ const AuthForm = ({ onLogin }: { onLogin: (user: any) => void }) => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      onLogin({ email, id: '1' });
+    try {
+      if (isLogin) {
+        const response = await apiService.login(email, password);
+        onLogin(response.user);
+        toast.success('Login successful!');
+      } else {
+        await apiService.register(email, password);
+        toast.success('Registration successful! Please login.');
+        setIsLogin(true);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Authentication failed');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -299,12 +331,23 @@ const AuthForm = ({ onLogin }: { onLogin: (user: any) => void }) => {
 function App() {
   const [user, setUser] = useState<any>(null);
 
+  useEffect(() => {
+    // Check if user is already logged in
+    const token = apiService.getToken();
+    if (token) {
+      // In a real app, you'd validate the token with the backend
+      setUser({ email: 'user@example.com', id: '1' });
+    }
+  }, []);
+
   const handleLogin = (userData: any) => {
     setUser(userData);
   };
 
   const handleLogout = () => {
+    apiService.clearToken();
     setUser(null);
+    toast.success('Logged out successfully');
   };
 
   return (
