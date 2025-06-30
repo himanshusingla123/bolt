@@ -75,32 +75,39 @@ class ApiService {
       headers['Content-Type'] = 'application/json';
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Network error' }));
-      const apiError = new Error(error.error || 'Request failed') as ApiError;
-      apiError.status = response.status;
-      
-      // Handle 401 Unauthorized responses
-      if (response.status === 401) {
-        this.clearToken();
-        if (this.onUnauthorizedCallback) {
-          this.onUnauthorizedCallback();
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Network error' }));
+        const apiError = new Error(error.error || `HTTP ${response.status}: ${response.statusText}`) as ApiError;
+        apiError.status = response.status;
+        
+        // Handle 401 Unauthorized responses
+        if (response.status === 401) {
+          this.clearToken();
+          if (this.onUnauthorizedCallback) {
+            this.onUnauthorizedCallback();
+          }
         }
+        
+        throw apiError;
       }
-      
-      throw apiError;
-    }
 
-    return response;
+      return response;
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error: Unable to connect to server. Please check your internet connection.');
+      }
+      throw error;
+    }
   }
 
   // Auth endpoints
-  async register(email: string, password: string): Promise<AuthResponse> {
+  async register(email: string, password: string): Promise<{ message: string; user: any }> {
     const response = await this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -120,6 +127,13 @@ class ApiService {
 
   async getCurrentUser(): Promise<{ user: { id: string; email: string } }> {
     const response = await this.request('/auth/me');
+    return response.json();
+  }
+
+  async logout(): Promise<{ message: string }> {
+    const response = await this.request('/auth/logout', {
+      method: 'POST',
+    });
     return response.json();
   }
 

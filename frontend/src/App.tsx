@@ -228,6 +228,17 @@ const AuthForm = ({ onLogin }: { onLogin: (user: any) => void }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    if (!isLogin && password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
     setLoading(true);
     
     try {
@@ -239,8 +250,10 @@ const AuthForm = ({ onLogin }: { onLogin: (user: any) => void }) => {
         await apiService.register(email, password);
         toast.success('Registration successful! Please login.');
         setIsLogin(true);
+        setPassword(''); // Clear password field after registration
       }
     } catch (error: any) {
+      console.error('Auth error:', error);
       toast.error(error.message || 'Authentication failed');
     } finally {
       setLoading(false);
@@ -273,6 +286,7 @@ const AuthForm = ({ onLogin }: { onLogin: (user: any) => void }) => {
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Enter your email"
               required
+              disabled={loading}
             />
           </div>
 
@@ -287,7 +301,14 @@ const AuthForm = ({ onLogin }: { onLogin: (user: any) => void }) => {
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Enter your password"
               required
+              disabled={loading}
+              minLength={isLogin ? 1 : 6}
             />
+            {!isLogin && (
+              <p className="text-white/60 text-xs mt-1">
+                Password must be at least 6 characters long
+              </p>
+            )}
           </div>
 
           <button
@@ -301,8 +322,12 @@ const AuthForm = ({ onLogin }: { onLogin: (user: any) => void }) => {
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-white/70 hover:text-white transition-colors"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setPassword(''); // Clear password when switching modes
+            }}
+            disabled={loading}
+            className="text-white/70 hover:text-white transition-colors disabled:opacity-50"
           >
             {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
           </button>
@@ -332,7 +357,14 @@ function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await apiService.logout();
+    } catch (error) {
+      // Even if logout fails on backend, clear local state
+      console.error('Logout error:', error);
+    }
+    
     apiService.clearToken();
     setUser(null);
     toast.success('Logged out successfully');
@@ -349,13 +381,10 @@ function App() {
           const response = await apiService.getCurrentUser();
           setUser(response.user);
         } catch (error: any) {
-          // Only clear token for authentication errors (401), not for other errors like 404
-          if (error.status === 401) {
-            apiService.clearToken();
-            setUser(null);
-          }
-          // For other errors (like 404), keep the token and set user to null
-          // This allows other authenticated requests to still work
+          console.error('Token validation error:', error);
+          // Clear invalid token
+          apiService.clearToken();
+          setUser(null);
         }
       }
       setLoading(false);
@@ -371,7 +400,10 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
+        <div className="text-white text-xl flex items-center space-x-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          <span>Loading...</span>
+        </div>
       </div>
     );
   }
