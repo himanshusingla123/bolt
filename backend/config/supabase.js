@@ -3,9 +3,23 @@ const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
+
+// Create client with anon key for regular operations
 const supabase = createClient(supabaseUrl, supabaseKey, {
   db: { schema: 'storage' }
 });
+
+// Create admin client with service role key for admin operations
+const supabaseAdmin = createClient(
+  supabaseUrl, 
+  process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 const initStorage = async () => {
   const { data: buckets } = await supabase.storage.listBuckets();
@@ -23,4 +37,4 @@ const initStorage = async () => {
   }
 };
 
-module.exports = { supabase, initStorage };
+module.exports = { supabase, supabaseAdmin, initStorage };
