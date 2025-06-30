@@ -7,8 +7,20 @@ router.post('/register', async (req, res) => {
   const { email, password } = req.body;
   
   try {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        emailRedirectTo: undefined // Disable email confirmation for development
+      }
+    });
+    
+    if (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+    
+    console.log('Registration successful:', data);
     
     // Return the response in the format expected by frontend
     res.status(201).json({
@@ -17,6 +29,7 @@ router.post('/register', async (req, res) => {
       created_at: data.user?.created_at
     });
   } catch (error) {
+    console.error('Registration failed:', error.message);
     res.status(400).json({ error: error.message });
   }
 });
@@ -25,9 +38,26 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
+  console.log('Login attempt for:', email);
+
   try {
+    // First, let's check if the user exists
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    
+    if (userError) {
+      console.error('Error checking user:', userError);
+    } else {
+      console.log('User found:', userData?.user?.email, 'Email confirmed:', userData?.user?.email_confirmed_at);
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    
+    if (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+    
+    console.log('Login successful:', data.user?.email);
     
     // Return the response in the format expected by frontend
     res.status(200).json({
@@ -36,6 +66,7 @@ router.post('/login', async (req, res) => {
       user: data.user
     });
   } catch (error) {
+    console.error('Login failed:', error.message);
     res.status(400).json({ error: error.message });
   }
 });
