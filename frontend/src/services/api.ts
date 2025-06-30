@@ -35,6 +35,7 @@ interface ApiError extends Error {
 
 class ApiService {
   private token: string | null = null;
+  private onUnauthorizedCallback: (() => void) | null = null;
 
   setToken(token: string) {
     this.token = token;
@@ -51,6 +52,10 @@ class ApiService {
   clearToken() {
     this.token = null;
     localStorage.removeItem('auth_token');
+  }
+
+  setOnUnauthorizedCallback(callback: () => void) {
+    this.onUnauthorizedCallback = callback;
   }
 
   private async request(endpoint: string, options: RequestInit = {}) {
@@ -79,6 +84,15 @@ class ApiService {
       const error = await response.json().catch(() => ({ error: 'Network error' }));
       const apiError = new Error(error.error || 'Request failed') as ApiError;
       apiError.status = response.status;
+      
+      // Handle 401 Unauthorized responses
+      if (response.status === 401) {
+        this.clearToken();
+        if (this.onUnauthorizedCallback) {
+          this.onUnauthorizedCallback();
+        }
+      }
+      
       throw apiError;
     }
 

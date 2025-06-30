@@ -332,7 +332,16 @@ function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const handleLogout = () => {
+    apiService.clearToken();
+    setUser(null);
+    toast.success('Logged out successfully');
+  };
+
   useEffect(() => {
+    // Set up automatic logout callback for 401 responses
+    apiService.setOnUnauthorizedCallback(handleLogout);
+
     const validateToken = async () => {
       const token = apiService.getToken();
       if (token) {
@@ -357,12 +366,6 @@ function App() {
 
   const handleLogin = (userData: any) => {
     setUser(userData);
-  };
-
-  const handleLogout = () => {
-    apiService.clearToken();
-    setUser(null);
-    toast.success('Logged out successfully');
   };
 
   if (loading) {
