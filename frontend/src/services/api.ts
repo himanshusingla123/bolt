@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://bolt-backend-fl0b.onrender.com';
+const API_BASE_URL = 'http://localhost:3000';
 
 interface AuthResponse {
   access_token: string;
@@ -54,13 +54,9 @@ class ApiService {
     const token = this.getToken();
     
     const headers: HeadersInit = {
+      'Content-Type': 'application/json',
       ...options.headers,
     };
-
-    // Only set Content-Type to application/json if body is not FormData
-    if (!(options.body instanceof FormData)) {
-      headers['Content-Type'] = 'application/json';
-    }
 
     if (token) {
       headers.Authorization = `Bearer ${token}`;
@@ -72,34 +68,11 @@ class ApiService {
     });
 
     if (!response.ok) {
-      // Check for 401 Unauthorized and clear invalid token
-      if (response.status === 401) {
-        this.clearToken();
-      }
-      
       const error = await response.json().catch(() => ({ error: 'Network error' }));
       throw new Error(error.error || 'Request failed');
     }
 
     return response;
-  }
-
-  // Token validation method
-  async validateToken(): Promise<boolean> {
-    const token = this.getToken();
-    if (!token) {
-      return false;
-    }
-
-    try {
-      // Make a simple authenticated request to validate the token
-      await this.getVoices();
-      return true;
-    } catch (error) {
-      // If the request fails, the token is invalid
-      this.clearToken();
-      return false;
-    }
   }
 
   // Auth endpoints
@@ -142,6 +115,7 @@ class ApiService {
 
     const response = await this.request('/stt/transcribe', {
       method: 'POST',
+      headers: {}, // Remove Content-Type to let browser set it for FormData
       body: formData,
     });
     return response.json();
@@ -159,6 +133,7 @@ class ApiService {
 
     const response = await this.request('/dubbing/create', {
       method: 'POST',
+      headers: {}, // Remove Content-Type to let browser set it for FormData
       body: formData,
     });
     return response.json();

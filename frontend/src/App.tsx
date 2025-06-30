@@ -330,26 +330,14 @@ const AuthForm = ({ onLogin }: { onLogin: (user: any) => void }) => {
 
 function App() {
   const [user, setUser] = useState<any>(null);
-  const [isValidatingToken, setIsValidatingToken] = useState(true);
 
   useEffect(() => {
-    // Validate token on app startup
-    const validateUserToken = async () => {
-      const token = apiService.getToken();
-      if (token) {
-        const isValid = await apiService.validateToken();
-        if (isValid) {
-          // Token is valid, set user as logged in
-          setUser({ email: 'user@example.com', id: '1' });
-        } else {
-          // Token is invalid, clear it and keep user as null
-          apiService.clearToken();
-        }
-      }
-      setIsValidatingToken(false);
-    };
-
-    validateUserToken();
+    // Check if user is already logged in
+    const token = apiService.getToken();
+    if (token) {
+      // In a real app, you'd validate the token with the backend
+      setUser({ email: 'user@example.com', id: '1' });
+    }
   }, []);
 
   const handleLogin = (userData: any) => {
@@ -361,15 +349,6 @@ function App() {
     setUser(null);
     toast.success('Logged out successfully');
   };
-
-  // Show loading state while validating token
-  if (isValidatingToken) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <Router>
