@@ -11,7 +11,11 @@ router.post('/register', async (req, res) => {
       email, 
       password,
       options: {
-        emailRedirectTo: undefined // Disable email confirmation for development
+        // Completely disable email confirmation for development
+        emailRedirectTo: null,
+        data: {
+          email_confirm: false
+        }
       }
     });
     
@@ -21,6 +25,19 @@ router.post('/register', async (req, res) => {
     }
     
     console.log('Registration successful:', data);
+    
+    // For development, we'll manually confirm the email
+    if (data.user && !data.user.email_confirmed_at) {
+      console.log('Manually confirming email for development...');
+      try {
+        await supabase.auth.admin.updateUserById(data.user.id, {
+          email_confirm: true
+        });
+        console.log('Email confirmed manually');
+      } catch (confirmError) {
+        console.error('Failed to confirm email manually:', confirmError);
+      }
+    }
     
     // Return the response in the format expected by frontend
     res.status(201).json({
@@ -41,19 +58,63 @@ router.post('/login', async (req, res) => {
   console.log('Login attempt for:', email);
 
   try {
-    // First, let's check if the user exists
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    // First, let's check if the user exists and their confirmation status
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+    const user = userData?.users?.find(u => u.email === email);
     
-    if (userError) {
-      console.error('Error checking user:', userError);
+    if (user) {
+      console.log('User found:', user.email, 'Email confirmed:', user.email_confirmed_at);
+      
+      // If user exists but email not confirmed, confirm it manually for development
+      if (!user.email_confirmed_at) {
+        console.log('Confirming email manually for login...');
+        try {
+          await supabase.auth.admin.updateUserById(user.id, {
+            email_confirm: true
+          });
+          console.log('Email confirmed manually for login');
+        } catch (confirmError) {
+          console.error('Failed to confirm email for login:', confirmError);
+        }
+      }
     } else {
-      console.log('User found:', userData?.user?.email, 'Email confirmed:', userData?.user?.email_confirmed_at);
+      console.log('User not found in database');
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
       console.error('Login error:', error);
+      
+      // If it's an email not confirmed error, try to handle it
+      if (error.message.includes('email not confirmed') || error.message.includes('Email not confirmed')) {
+        console.log('Attempting to resolve email confirmation issue...');
+        
+        // Try to find and confirm the user
+        if (user) {
+          try {
+            await supabase.auth.admin.updateUserById(user.id, {
+              email_confirm: true
+            });
+            console.log('Email confirmed, retrying login...');
+            
+            // Retry login
+            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({ email, password });
+            if (retryError) {
+              throw retryError;
+            }
+            
+            return res.status(200).json({
+              access_token: retryData.session?.access_token,
+              refresh_token: retryData.session?.refresh_token,
+              user: retryData.user
+            });
+          } catch (retryConfirmError) {
+            console.error('Failed to confirm and retry:', retryConfirmError);
+          }
+        }
+      }
+      
       throw error;
     }
     
