@@ -10,8 +10,18 @@ const dubbingRoutes = require('./routes/dubbing');
 require('dotenv').config();
 
 const app = express();
+
+// Health check endpoint for Render
 app.get('/health', (req, res) => res.sendStatus(200));
-app.use(cors());
+
+// Configure CORS properly
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://localhost:5173', 'http://127.0.0.1:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true
+}));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
