@@ -54,9 +54,13 @@ class ApiService {
     const token = this.getToken();
     
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
       ...options.headers,
     };
+
+    // Only set Content-Type to application/json if body is not FormData
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (token) {
       headers.Authorization = `Bearer ${token}`;
@@ -115,7 +119,6 @@ class ApiService {
 
     const response = await this.request('/stt/transcribe', {
       method: 'POST',
-      headers: {}, // Remove Content-Type to let browser set it for FormData
       body: formData,
     });
     return response.json();
@@ -133,7 +136,6 @@ class ApiService {
 
     const response = await this.request('/dubbing/create', {
       method: 'POST',
-      headers: {}, // Remove Content-Type to let browser set it for FormData
       body: formData,
     });
     return response.json();
